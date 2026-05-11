@@ -22,6 +22,7 @@ export default function ServicesPage() {
     try { const r = await servicesApi.list(); setServices(r.data); }
     catch { showToast('Ошибка загрузки услуг','error'); }
     finally { setLoading(false); }
+    
   };
 
   const sortedServices = [...services].sort((a, b) => {
