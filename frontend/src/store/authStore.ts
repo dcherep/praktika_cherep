@@ -33,3 +33,16 @@ export const useAuthStore = create<AuthStore>()(
     { name: 'auth-storage', partialize: (s) => ({ token: s.token, user: s.user }) }
   )
 );
+
+// Временно для тестирования — КЛИЕНТ
+const testUser = {
+  id: 1,
+  name: "Тестовый Клиент",
+  role: "client" as UserRole
+};
+
+// Устанавливаем тестовые данные
+if (!localStorage.getItem('token')) {
+  localStorage.setItem('token', 'test-token');
+  useAuthStore.getState().setAuth('test-token', testUser);
+}

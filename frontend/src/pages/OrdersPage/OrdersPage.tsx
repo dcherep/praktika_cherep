@@ -53,6 +53,11 @@ export default function OrdersPage() {
   const [statusData, setStatusData] = useState({ status: '', worker_id: '' });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+  // Загрузка статусов оплаты из localStorage
+  const [paymentStatuses, setPaymentStatuses] = useState<Record<number, string>>(() => {
+    const saved = localStorage.getItem('paymentStatuses');
+    return saved ? JSON.parse(saved) : {};
+  });
 
   const user = useAuthStore((s) => s.user);
   const { showToast, ToastContainer } = useToast();
@@ -196,6 +201,13 @@ export default function OrdersPage() {
 
   const isMasterOrAdmin = user?.role === 'master' || user?.role === 'admin';
 
+  // Функция обновления статуса оплаты с сохранением в localStorage
+  const updatePaymentStatus = (orderId: number, status: string) => {
+    const newStatuses = { ...paymentStatuses, [orderId]: status };
+    setPaymentStatuses(newStatuses);
+    localStorage.setItem('paymentStatuses', JSON.stringify(newStatuses));
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <ToastContainer />
@@ -252,7 +264,8 @@ export default function OrdersPage() {
               <tr className="bg-primary-light border-b border-gray-200">
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">ID</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Дата</th>
-                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Статус</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Статус заявки</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Оплата</th>  
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Мастерская</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Клиент</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Автомобиль</th>
@@ -260,77 +273,89 @@ export default function OrdersPage() {
                 {isMasterOrAdmin && <th className="p-3 text-left text-sm font-semibold text-primary-dark">Действия</th>}
               </tr>
             </thead>
-            <tbody>
-              {orders.map((o, i) => (
-                <tr key={o.id} className={`border-b hover:bg-blue-50/30 transition ${i % 2 === 1 ? 'bg-gray-50/40' : ''}`}>
-                  <td className="p-3 text-sm font-mono text-gray-500">#{o.id}</td>
-                  <td className="p-3 text-sm text-gray-600 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('ru-RU')}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[o.status] || 'bg-gray-100'}`}>
-                      {STATUS_LABELS[o.status] || o.status}
-                    </span>
-                  </td>
-                  <td className="p-3 text-sm">
-                    {o.workshop ? (
-                      <div>
-                        <div className="font-medium">{o.workshop.name}</div>
-                        <div className="text-xs text-gray-500">{o.workshop.city}</div>
-                      </div>
-                    ) : '—'}
-                  </td>
-                  <td className="p-3 text-sm">{o.client ? `${o.client.last_name} ${o.client.first_name}` : '—'}</td>
-                  <td className="p-3 text-sm whitespace-nowrap">{o.car_brand} {o.car_model} {o.car_year}</td>
-                  <td className="p-3 text-sm text-gray-600 max-w-[150px]">
-                    <span className="block truncate">{o.order_services.map(os => os.service?.name).filter(Boolean).join(', ') || '—'}</span>
-                  </td>
-                  {isMasterOrAdmin && (
+              <tbody>
+                {orders.map((o, i) => (
+                  <tr key={o.id} className={`border-b hover:bg-blue-50/30 transition ${i % 2 === 1 ? 'bg-gray-50/40' : ''}`}>
+                    {/* 1. ID */}
+                    <td className="p-3 text-sm font-mono text-gray-500">#{o.id}</td>
+                    
+                    {/* 2. Дата */}
+                    <td className="p-3 text-sm text-gray-600 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('ru-RU')}</td>
+                    
+                    {/* 3. Статус заявки */}
                     <td className="p-3">
-                      <div className="flex gap-1 flex-wrap">
-                        {o.status === 'new' && (
-                          <>
-                            <button onClick={() => openEdit(o)} className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
-                              ✏️ Редактировать
-                            </button>
-                            <button onClick={() => openStatusChange(o)} className="px-2 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600 transition">
-                              🔄 Сменить статус
-                            </button>
-                            <button onClick={() => handleDelete(o)} disabled={deleting === o.id}
-                              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
-                              🗑️ Удалить
-                            </button>
-                          </>
-                        )}
-                        {o.status === 'in_progress' && (
-                          <>
-                            <button onClick={() => openEdit(o)} className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
-                              ✏️ Редактировать
-                            </button>
-                            <button onClick={() => openStatusChange(o)} className="px-2 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600 transition">
-                              🔄 Сменить статус
-                            </button>
-                            <button onClick={() => handleDelete(o)} disabled={deleting === o.id}
-                              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
-                              🗑️ Удалить
-                            </button>
-                          </>
-                        )}
-                        {o.status === 'done' && (
-                          <>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[o.status] || 'bg-gray-100'}`}>
+                        {STATUS_LABELS[o.status] || o.status}
+                      </span>
+                    </td>
+                    
+                    {/* 4. СТАТУС ОПЛАТЫ (новая колонка) */}
+                    <td className="p-3 text-sm">
+                      <select
+                        value={paymentStatuses[o.id] || 'unpaid'}
+                        onChange={(e) => updatePaymentStatus(o.id, e.target.value)}
+                        className={`text-xs rounded px-2 py-1 border ${
+                          (paymentStatuses[o.id] || 'unpaid') === 'paid' ? 'bg-green-50 text-green-700 border-green-300' :
+                          (paymentStatuses[o.id] || 'unpaid') === 'partial' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                          'bg-red-50 text-red-700 border-red-300'
+                        }`}
+                      >
+                        <option value="unpaid">❌ Не оплачено</option>
+                        <option value="partial">⚠️ Частично</option>
+                        <option value="paid">✅ Оплачено</option>
+                      </select>
+                    </td>
+                    
+                    {/* 5. Мастерская */}
+                    <td className="p-3 text-sm">
+                      {o.workshop ? (
+                        <div>
+                          <div className="font-medium">{o.workshop.name}</div>
+                          <div className="text-xs text-gray-500">{o.workshop.city}</div>
+                        </div>
+                      ) : '—'}
+                    </td>
+                    
+                    {/* 6. Клиент */}
+                    <td className="p-3 text-sm">{o.client ? `${o.client.last_name} ${o.client.first_name}` : '—'}</td>
+                    
+                    {/* 7. Автомобиль */}
+                    <td className="p-3 text-sm whitespace-nowrap">{o.car_brand} {o.car_model} {o.car_year}</td>
+                    
+                    {/* 8. Услуги */}
+                    <td className="p-3 text-sm text-gray-600 max-w-[150px]">
+                      <span className="block truncate">{o.order_services.map(os => os.service?.name).filter(Boolean).join(', ') || '—'}</span>
+                    </td>
+                    
+                    {/* 9. Действия (только для master/admin) */}
+                    {isMasterOrAdmin && (
+                      <td className="p-3">
+                        <div className="flex gap-1 flex-wrap">
+                          {o.status !== 'done' && (
+                            <>
+                              <button onClick={() => openEdit(o)} className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
+                                ✏️ Редактировать
+                              </button>
+                              <button onClick={() => openStatusChange(o)} className="px-2 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600 transition">
+                                🔄 Сменить статус
+                              </button>
+                            </>
+                          )}
+                          {o.status === 'done' && (
                             <button onClick={() => { setSelectedOrder(o); setShowContactModal(true); }}
                               className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition">
                               📞 Связаться
                             </button>
-                            <button onClick={() => handleDelete(o)} disabled={deleting === o.id}
-                              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
-                              🗑️ Удалить
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
+                          )}
+                          <button onClick={() => handleDelete(o)} disabled={deleting === o.id}
+                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
+                            🗑️ Удалить
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
             </tbody>
           </table>
         )}
