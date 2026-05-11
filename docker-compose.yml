@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: autoservice
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:secret@db:5432/autoservice
+      SECRET_KEY: your-secret-key-change-in-production-use-long-random-string
+      CORS_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+    depends_on:
+      db:
+        condition: service_healthy
+    # 👇 Вся логика запуска здесь
+    command: >
+      sh -c "
+        python -c 'from app.database import engine, Base; Base.metadata.create_all(bind=engine)' &&
+        alembic upgrade head &&
+        python seed_test_data.py &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+      "
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

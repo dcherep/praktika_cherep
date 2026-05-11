@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #2E75B6;
+  --color-primary-dark: #1F3864;
+  --color-primary-light: #EEF4FB;
+  --color-success: #1B7A3B;
+  --color-danger: #C0392B;
+  --color-warning: #E67E22;
+  --color-neutral: #6B7280;
+  --color-bg: #F8FAFF;
+  --color-text: #1A1A2E;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
