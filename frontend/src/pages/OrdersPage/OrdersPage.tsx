@@ -7,6 +7,7 @@ import { workshopsApi } from '../../api/workshopsApi';
 import { useAuthStore } from '../../store/authStore';
 import { useToast } from '../../components/Toast/Toast';
 import StarRating from '../../components/StarRating';
+import OrderChat from '../../components/OrderChat';
 
 const STATUS_LABELS: Record<string, string> = { new: 'Новая', in_progress: 'В работе', done: 'Готово' };
 const STATUS_COLORS: Record<string, string> = {
@@ -46,6 +47,7 @@ export default function OrdersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [services, setServices] = useState<any[]>([]);
@@ -376,6 +378,16 @@ export default function OrdersPage() {
                             className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
                             🗑️ Удалить
                           </button>
+                          {/* Кнопка чата */}
+                          <button
+                            onClick={() => {
+                              setSelectedOrder(o);
+                              setShowChatModal(true);
+                            }}
+                            className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition"
+                          >
+                            💬 Чат
+                          </button>
                         </div>
                       </td>
                     )}
@@ -590,6 +602,31 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+    {/* ===== МОДАЛЬНОЕ ОКНО ЧАТА ===== */}
+    {showChatModal && selectedOrder && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl w-full max-w-xl">
+          <div className="p-4 border-b flex justify-between items-center">
+            <h2 className="text-lg font-bold text-primary-dark">
+              💬 Чат по заявке #{selectedOrder.id}
+            </h2>
+            <button
+              onClick={() => setShowChatModal(false)}
+              className="text-gray-400 hover:text-gray-600 text-xl"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-4">
+            <OrderChat
+              orderId={selectedOrder.id}
+              currentUserName={user?.name || 'Пользователь'}
+              currentUserRole={user?.role || 'client'}
+            />
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 }
