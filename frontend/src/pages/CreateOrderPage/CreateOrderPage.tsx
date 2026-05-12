@@ -8,6 +8,7 @@ import { workshopsApi } from '../../api/workshopsApi';
 import { useAuthStore } from '../../store/authStore';
 import { ordersApi } from '../../api/ordersApi';
 import { useToast } from '../../components/Toast/Toast';
+import BookingCalendar from '../../components/BookingCalendar';
 
 const schema = yup.object({
   first_name: yup.string().required('Введите имя'),
@@ -31,6 +32,7 @@ export default function CreateOrderPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { showToast, ToastContainer } = useToast();
+  const [selectedDateTime, setSelectedDateTime] = useState<{ date: string; time: string } | null>(null);
 
   useEffect(() => { 
     servicesApi.list().then((r) => setServices(r.data));
@@ -40,6 +42,9 @@ export default function CreateOrderPage() {
   const { register, handleSubmit, formState:{errors}, setValue, watch } = useForm<FormData>({
     resolver: yupResolver(schema), defaultValues: { service_ids:[] },
   });
+  const handleSelectDateTime = (date: string, time: string) => {
+    setSelectedDateTime({ date, time });
+  };
 
   const selectedIds = (watch('service_ids') || []) as number[];
   const total = services.filter((s) => selectedIds.includes(s.id)).reduce((sum, s) => sum + (Number(s.price)||0), 0);
@@ -56,6 +61,8 @@ export default function CreateOrderPage() {
           description: data.description || null,
           service_ids: data.service_ids,
           workshop_id: data.workshop_id,
+          appointment_date: selectedDateTime?.date,  // добавить дату
+          appointment_time: selectedDateTime?.time,  // добавить время
         });
         showToast('Заявка создана!', 'success');
         navigate('/app/orders');
@@ -78,7 +85,7 @@ export default function CreateOrderPage() {
 
   const isMaster = user?.role === 'master' || user?.role === 'admin';
 
-  return (
+ return (
     <div className="max-w-xl mx-auto">
       <ToastContainer />
       <h1 className="text-2xl font-bold text-primary-dark mb-6">
@@ -205,9 +212,37 @@ export default function CreateOrderPage() {
             placeholder="Опишите проблему или пожелания..." />
         </div>
 
+        {/* ===== КАЛЕНДАРЬ ЗАПИСИ (ВНУТРИ ФОРМЫ!) ===== */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+          <BookingCalendar onSelectDateTime={handleSelectDateTime} />
+        </div>
+
+        {/* Отображение выбранной даты и предупреждение */}
+        {selectedDateTime ? (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
+            <span>✅</span>
+            Вы записаны на <strong>{selectedDateTime.date}</strong> в <strong>{selectedDateTime.time}</strong>
+          </div>
+        ) : (
+          !isMaster && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm flex items-center gap-2">
+              <span>⚠️</span>
+              Пожалуйста, выберите дату и время записи перед оплатой
+            </div>
+          )
+        )}
+
+        {/* Кнопки */}
         <div className="flex gap-3">
-          <button type="submit" disabled={saving}
-            className="flex-1 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition font-semibold disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={saving || (!isMaster && !selectedDateTime)} 
+            className={`flex-1 py-3 rounded-xl font-semibold transition ${
+              saving || (!isMaster && !selectedDateTime)
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary text-white hover:bg-primary-dark'
+            }`}
+          >
             {saving ? 'Сохранение...' : (isMaster ? 'Создать заявку' : 'Далее — к оплате →')}
           </button>
           <button type="button" onClick={()=>navigate('/app/orders')}
