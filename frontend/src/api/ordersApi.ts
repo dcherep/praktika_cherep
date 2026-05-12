@@ -12,4 +12,6 @@ export const ordersApi = {
     api.get(`/orders/${orderId}/workers`),
   assignWorker: (orderId: number, workerId: number) =>
     api.post(`/orders/${orderId}/workers`, null, { params: { worker_id: workerId } }),
+  updatePaymentStatus: (id: number, status: string) => 
+  api.patch(`/orders/${id}/payment-status`, { payment_status: status }),
 };

@@ -6,6 +6,7 @@ import { workersApi, Worker } from '../../api/workersApi';
 import { workshopsApi } from '../../api/workshopsApi';
 import { useAuthStore } from '../../store/authStore';
 import { useToast } from '../../components/Toast/Toast';
+import StarRating from '../../components/StarRating';
 
 const STATUS_LABELS: Record<string, string> = { new: 'Новая', in_progress: 'В работе', done: 'Готово' };
 const STATUS_COLORS: Record<string, string> = {
@@ -56,6 +57,10 @@ export default function OrdersPage() {
   // Загрузка статусов оплаты из localStorage
   const [paymentStatuses, setPaymentStatuses] = useState<Record<number, string>>(() => {
     const saved = localStorage.getItem('paymentStatuses');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [ratings, setRatings] = useState<Record<number, number>>(() => {
+    const saved = localStorage.getItem('masterRatings');
     return saved ? JSON.parse(saved) : {};
   });
 
@@ -207,6 +212,13 @@ export default function OrdersPage() {
     setPaymentStatuses(newStatuses);
     localStorage.setItem('paymentStatuses', JSON.stringify(newStatuses));
   };
+  // Функция сохранения оценки мастера
+  const updateRating = (orderId: number, rating: number) => {
+    const newRatings = { ...ratings, [orderId]: rating };
+    setRatings(newRatings);
+    localStorage.setItem('masterRatings', JSON.stringify(newRatings));
+    showToast(`Спасибо за оценку ${rating}★`, 'success');
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -270,6 +282,7 @@ export default function OrdersPage() {
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Клиент</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Автомобиль</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Услуги</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Оценка</th>
                 {isMasterOrAdmin && <th className="p-3 text-left text-sm font-semibold text-primary-dark">Действия</th>}
               </tr>
             </thead>
@@ -304,6 +317,18 @@ export default function OrdersPage() {
                         <option value="partial">⚠️ Частично</option>
                         <option value="paid">✅ Оплачено</option>
                       </select>
+                    </td>
+                    {/* Оценка работы мастера */}
+                    <td className="p-3">
+                        <StarRating
+                          rating={ratings[o.id] || 0}
+                          onRate={(value) => updateRating(o.id, value)}
+                          readonly={o.status !== 'done'}
+                          size="md"
+                        />
+                        {o.status !== 'done' && (
+                          <span className="text-xs text-gray-400 ml-2">(доступно после готовности)</span>
+                        )}
                     </td>
                     
                     {/* 5. Мастерская */}
