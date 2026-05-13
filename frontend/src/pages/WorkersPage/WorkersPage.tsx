@@ -10,6 +10,79 @@ const STATUS_BADGE: Record<'free' | 'assigned', string> = {
   assigned: 'bg-amber-100 text-amber-800',
 };
 
+// Компонент для отображения заявок (заглушка с тестовыми данными)
+const AppointmentsList = ({ workerId, date }: { workerId: number; date: string }) => {
+  // Тестовые данные для демонстрации (в зависимости от дня недели)
+  const getMockAppointments = (dateStr: string, workerIdNum: number) => {
+    const dayOfWeek = new Date(dateStr).getDay();
+    
+    // Разные записи для разных дней
+    if (dayOfWeek === 1) { // Понедельник
+      return [
+        { id: 1, time: '10:00', car: 'Toyota Camry', client: 'Иванов', status: 'new' },
+        { id: 2, time: '14:30', car: 'Hyundai Solaris', client: 'Петров', status: 'in_progress' },
+      ];
+    } else if (dayOfWeek === 2) { // Вторник
+      return [
+        { id: 3, time: '09:00', car: 'Kia Rio', client: 'Сидоров', status: 'new' },
+        { id: 4, time: '13:00', car: 'Renault Logan', client: 'Кузнецов', status: 'new' },
+        { id: 5, time: '16:00', car: 'Lada Vesta', client: 'Михайлов', status: 'done' },
+      ];
+    } else if (dayOfWeek === 3) { // Среда
+      return [
+        { id: 6, time: '11:00', car: 'BMW X5', client: 'Соколов', status: 'in_progress' },
+      ];
+    } else if (dayOfWeek === 4) { // Четверг
+      return [
+        { id: 7, time: '12:00', car: 'Mercedes E200', client: 'Новиков', status: 'new' },
+        { id: 8, time: '15:00', car: 'Audi A6', client: 'Морозов', status: 'new' },
+      ];
+    } else if (dayOfWeek === 5) { // Пятница
+      return [
+        { id: 9, time: '09:30', car: 'Volkswagen Polo', client: 'Волков', status: 'in_progress' },
+        { id: 10, time: '14:00', car: 'Ford Focus', client: 'Алексеев', status: 'new' },
+        { id: 11, time: '17:00', car: 'Nissan Qashqai', client: 'Лебедев', status: 'new' },
+      ];
+    } else if (dayOfWeek === 6) { // Суббота
+      return [
+        { id: 12, time: '10:30', car: 'Mazda CX-5', client: 'Егоров', status: 'new' },
+      ];
+    } else { // Воскресенье — выходной
+      return [];
+    }
+  };
+
+  const appointments = getMockAppointments(date, workerId);
+  const dateObj = new Date(date);
+  const isWeekend = dateObj.getDay() === 0;
+
+  if (isWeekend) {
+    return <div className="text-xs text-gray-400">Выходной день</div>;
+  }
+
+  if (appointments.length === 0) {
+    return <div className="text-xs text-gray-400">Нет записей</div>;
+  }
+
+  return (
+    <div className="space-y-1">
+      {appointments.map((apt) => (
+        <div key={apt.id} className="text-xs bg-blue-50 p-1 rounded">
+          <span className="font-medium">{apt.time}</span> - {apt.car}
+          <div className="text-[10px] text-gray-500">{apt.client}</div>
+          <span className={`inline-block mt-1 px-1 rounded text-[10px] ${
+            apt.status === 'done' ? 'bg-green-200' : 
+            apt.status === 'in_progress' ? 'bg-yellow-200' : 'bg-blue-100'
+          }`}>
+            {apt.status === 'done' ? '✓ Готово' : 
+             apt.status === 'in_progress' ? '🔄 В работе' : '○ Новая'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function WorkersPage() {
   const { user } = useAuthStore();
   const { showToast, ToastContainer } = useToast();
@@ -24,8 +97,10 @@ export default function WorkersPage() {
   const [form, setForm] = useState<WorkerCreate>({ first_name: '', last_name: '', position: '', workshop_id: null });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const isAdmin = user?.role === 'admin';
+  const isMaster = user?.role === 'master';
 
   const fetchData = async () => {
     setLoading(true);
@@ -116,33 +191,76 @@ export default function WorkersPage() {
     }
   };
 
+  // Получить следующие 7 дней
+  const getNextDays = () => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      days.push(d.toISOString().split('T')[0]);
+    }
+    return days;
+  };
+
+  const nextDays = getNextDays();
+
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       <ToastContainer />
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-primary-dark">Работники</h1>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium"
-        >
-          + Добавить работника
-        </button>
+        <h1 className="text-2xl font-bold text-primary-dark">
+          {isMaster ? 'Расписание мастеров' : 'Работники'}
+        </h1>
+        {isAdmin && (
+          <button
+            onClick={openCreate}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium"
+          >
+            + Добавить работника
+          </button>
+        )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      {/* Выбор даты для просмотра расписания */}
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 shadow-sm">
+        <div className="text-sm font-medium text-gray-700 mb-2">📅 Выберите дату:</div>
+        <div className="grid grid-cols-7 gap-2">
+          {nextDays.map((date) => (
+            <button
+              key={date}
+              onClick={() => setSelectedDate(date)}
+              className={`p-2 rounded-lg text-center text-sm transition ${
+                selectedDate === date
+                  ? 'bg-primary text-white'
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+            >
+              <div className="text-xs">
+                {new Date(date).toLocaleDateString('ru', { weekday: 'short' })}
+              </div>
+              <div className="font-bold">{new Date(date).getDate()}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Таблица работников и их записей */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto shadow-sm">
         {loading ? (
           <div className="p-12 text-center text-gray-400">Загрузка...</div>
         ) : workers.length === 0 ? (
           <div className="p-12 text-center text-gray-400">Работников пока нет</div>
         ) : (
-          <table className="w-full">
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="bg-primary-light border-b">
-                {['ID', 'ФИО', 'Должность', 'Мастерская', 'Статус', 'Активность', 'Действия'].map((h) => (
-                  <th key={h} className="p-3 text-left text-sm font-semibold text-primary-dark">
-                    {h}
-                  </th>
-                ))}
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">ID</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">ФИО</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Должность</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Мастерская</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Статус</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Записи на {new Date(selectedDate).toLocaleDateString('ru')}</th>
+                {isAdmin && <th className="p-3 text-left text-sm font-semibold text-primary-dark">Действия</th>}
               </tr>
             </thead>
             <tbody>
@@ -175,36 +293,32 @@ export default function WorkersPage() {
                     </span>
                   </td>
                   <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        w.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {w.is_active ? 'Активен' : 'Не активен'}
-                    </span>
+                    <AppointmentsList workerId={w.id} date={selectedDate} />
                   </td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => openSchedule(w)}
-                        className="px-2 py-1 border border-blue-300 text-blue-600 text-xs rounded hover:bg-blue-50 transition"
-                      >
-                        📅 Расписание
-                      </button>
-                      <button
-                        onClick={() => openEdit(w)}
-                        className="px-2 py-1 border border-primary text-primary text-xs rounded hover:bg-primary-light transition"
-                      >
-                        Изменить
-                      </button>
-                      <button
-                        onClick={() => toggleActive(w)}
-                        className="px-2 py-1 border border-gray-300 text-xs rounded hover:bg-gray-50 transition"
-                      >
-                        {w.is_active ? 'Деактивировать' : 'Активировать'}
-                      </button>
-                    </div>
-                  </td>
+                  {isAdmin && (
+                    <td className="p-3">
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => openSchedule(w)}
+                          className="px-2 py-1 border border-blue-300 text-blue-600 text-xs rounded hover:bg-blue-50 transition"
+                        >
+                          📅 Расписание
+                        </button>
+                        <button
+                          onClick={() => openEdit(w)}
+                          className="px-2 py-1 border border-primary text-primary text-xs rounded hover:bg-primary-light transition"
+                        >
+                          Изменить
+                        </button>
+                        <button
+                          onClick={() => toggleActive(w)}
+                          className="px-2 py-1 border border-gray-300 text-xs rounded hover:bg-gray-50 transition"
+                        >
+                          {w.is_active ? 'Деактивировать' : 'Активировать'}
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -212,6 +326,7 @@ export default function WorkersPage() {
         )}
       </div>
 
+      {/* Модальное окно создания/редактирования работника */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
@@ -290,6 +405,7 @@ export default function WorkersPage() {
         </div>
       )}
 
+      {/* Модальное окно расписания */}
       {showScheduleModal && selectedWorkerForSchedule && (
         <WorkerScheduleModal
           workerId={selectedWorkerForSchedule.id}
@@ -300,4 +416,3 @@ export default function WorkersPage() {
     </div>
   );
 }
-

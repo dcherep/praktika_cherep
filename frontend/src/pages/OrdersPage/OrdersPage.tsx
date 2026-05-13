@@ -72,6 +72,33 @@ export default function OrdersPage() {
   const user = useAuthStore((s) => s.user);
   const { showToast, ToastContainer } = useToast();
 
+  // Функция для получения города по ID мастерской (временное решение)
+  const getWorkshopCity = (workshopId: number) => {
+    const map: Record<number, string> = {
+      172: 'Москва',
+      173: 'Москва',
+      174: 'Санкт-Петербург',
+      175: 'Санкт-Петербург',
+      176: 'Новосибирск',
+      177: 'Казань',
+      178: 'Екатеринбург',
+    };
+    return map[workshopId] || 'Неизвестно';
+  };
+
+  const getWorkshopName = (workshopId: number) => {
+    const map: Record<number, string> = {
+      172: 'Москва — Центральная',
+      173: 'Москва — Юг',
+      174: 'Санкт-Петербург — Невский',
+      175: 'Санкт-Петербург — Васильевский',
+      176: 'Новосибирск — Центр',
+      177: 'Казань — Волга',
+      178: 'Екатеринбург — Урал',
+    };
+    return map[workshopId] || 'Мастерская';
+  };
+
   useEffect(() => {
     if (user?.role === 'admin') {
       workshopsApi.list().then((r) => setWorkshops(r.data)).catch(() => {});
@@ -312,13 +339,19 @@ export default function OrdersPage() {
                       <option value="paid">✅ Оплачено</option>
                     </select>
                   </td>
+                  {/* Мастерская — с fallback на ID если нет объекта workshop */}
                   <td className="p-3 text-sm">
                     {o.workshop ? (
                       <div>
                         <div className="font-medium">{o.workshop.name}</div>
                         <div className="text-xs text-gray-500">{o.workshop.city}</div>
                       </div>
-                    ) : '—'}
+                    ) : (
+                      <div>
+                        <div className="font-medium">{getWorkshopName(o.workshop_id)}</div>
+                        <div className="text-xs text-gray-500">{getWorkshopCity(o.workshop_id)}</div>
+                      </div>
+                    )}
                   </td>
                   <td className="p-3 text-sm">{o.client ? `${o.client.last_name} ${o.client.first_name}` : '—'}</td>
                   <td className="p-3 text-sm whitespace-nowrap">{o.car_brand} {o.car_model} {o.car_year}</td>
