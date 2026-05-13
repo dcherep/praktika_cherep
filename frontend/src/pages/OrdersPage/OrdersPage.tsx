@@ -271,7 +271,7 @@ export default function OrdersPage() {
             <p className="text-4xl mb-3">📋</p><p>Заявок не найдено</p>
           </div>
         ) : (
-          <table className="w-full min-w-[800px]">
+          <table className="w-full min-w-[900px]">
             <thead>
               <tr className="bg-primary-light border-b border-gray-200">
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">ID</th>
@@ -283,6 +283,7 @@ export default function OrdersPage() {
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Автомобиль</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Услуги</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Оценка</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Чат</th>
                 {isMasterOrAdmin && <th className="p-3 text-left text-sm font-semibold text-primary-dark">Действия</th>}
               </tr>
             </thead>
@@ -332,6 +333,15 @@ export default function OrdersPage() {
                       size="sm"
                     />
                   </td>
+                  {/* Кнопка чата для всех пользователей */}
+                  <td className="p-3">
+                    <button 
+                      onClick={() => { setSelectedOrder(o); setShowChatModal(true); }}
+                      className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition whitespace-nowrap"
+                    >
+                      💬 Чат
+                    </button>
+                  </td>
                   {isMasterOrAdmin && (
                     <td className="p-3">
                       <div className="flex gap-1 flex-wrap">
@@ -342,10 +352,6 @@ export default function OrdersPage() {
                             </button>
                             <button onClick={() => openStatusChange(o)} className="px-2 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600 transition">
                               🔄 Статус
-                            </button>
-                            <button onClick={() => { setSelectedOrder(o); setShowChatModal(true); }} 
-                              className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition">
-                              💬 Чат
                             </button>
                           </>
                         )}
