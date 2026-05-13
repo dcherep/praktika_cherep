@@ -56,11 +56,14 @@ export default function OrdersPage() {
   const [statusData, setStatusData] = useState({ status: '', worker_id: '' });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
-  // Загрузка статусов оплаты из localStorage
+  
+  // Статусы оплаты
   const [paymentStatuses, setPaymentStatuses] = useState<Record<number, string>>(() => {
     const saved = localStorage.getItem('paymentStatuses');
     return saved ? JSON.parse(saved) : {};
   });
+  
+  // Оценки мастеров
   const [ratings, setRatings] = useState<Record<number, number>>(() => {
     const saved = localStorage.getItem('masterRatings');
     return saved ? JSON.parse(saved) : {};
@@ -139,8 +142,7 @@ export default function OrdersPage() {
     }
   };
 
-  // Открытие смены статуса
-    const openStatusChange = async (order: Order) => {
+  const openStatusChange = async (order: Order) => {
     setSelectedOrder(order);
     await workersApi.listByWorkshop(order.workshop_id).then((r) => setWorkers(r.data));
     let assignedWorkerId = '';
@@ -157,8 +159,7 @@ export default function OrdersPage() {
     setShowStatusModal(true);
   };
 
-  // Сохранение статуса + назначение техника
-    const handleSaveStatus = async () => {
+  const handleSaveStatus = async () => {
     if (!selectedOrder) return;
     setSaving(true);
     try {
@@ -186,7 +187,7 @@ export default function OrdersPage() {
     }
   };
 
-    const handleDelete = async (order: Order) => {
+  const handleDelete = async (order: Order) => {
     if (!window.confirm(`Удалить заявку #${order.id}?`)) return;
     setDeleting(order.id);
     try {
@@ -208,13 +209,12 @@ export default function OrdersPage() {
 
   const isMasterOrAdmin = user?.role === 'master' || user?.role === 'admin';
 
-  // Функция обновления статуса оплаты с сохранением в localStorage
   const updatePaymentStatus = (orderId: number, status: string) => {
     const newStatuses = { ...paymentStatuses, [orderId]: status };
     setPaymentStatuses(newStatuses);
     localStorage.setItem('paymentStatuses', JSON.stringify(newStatuses));
   };
-  // Функция сохранения оценки мастера
+
   const updateRating = (orderId: number, rating: number) => {
     const newRatings = { ...ratings, [orderId]: rating };
     setRatings(newRatings);
@@ -226,7 +226,6 @@ export default function OrdersPage() {
     <div className="max-w-7xl mx-auto">
       <ToastContainer />
 
-      {/* Заголовок */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-primary-dark">📋 Заявки</h1>
         <Link to="/app/orders/new" className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition font-medium">
@@ -234,7 +233,6 @@ export default function OrdersPage() {
         </Link>
       </div>
 
-      {/* Фильтры */}
       {isMasterOrAdmin && (
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap gap-3 shadow-sm">
           <input type="text" placeholder="🔍 Поиск по клиенту или авто..." value={search} onChange={(e) => setSearch(e.target.value)}
@@ -273,13 +271,13 @@ export default function OrdersPage() {
             <p className="text-4xl mb-3">📋</p><p>Заявок не найдено</p>
           </div>
         ) : (
-          <table className="w-full">
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="bg-primary-light border-b border-gray-200">
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">ID</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Дата</th>
-                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Статус заявки</th>
-                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Оплата</th>  
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Статус</th>
+                <th className="p-3 text-left text-sm font-semibold text-primary-dark">Оплата</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Мастерская</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Клиент</th>
                 <th className="p-3 text-left text-sm font-semibold text-primary-dark">Автомобиль</th>
@@ -288,111 +286,84 @@ export default function OrdersPage() {
                 {isMasterOrAdmin && <th className="p-3 text-left text-sm font-semibold text-primary-dark">Действия</th>}
               </tr>
             </thead>
-              <tbody>
-                {orders.map((o, i) => (
-                  <tr key={o.id} className={`border-b hover:bg-blue-50/30 transition ${i % 2 === 1 ? 'bg-gray-50/40' : ''}`}>
-                    {/* 1. ID */}
-                    <td className="p-3 text-sm font-mono text-gray-500">#{o.id}</td>
-                    
-                    {/* 2. Дата */}
-                    <td className="p-3 text-sm text-gray-600 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('ru-RU')}</td>
-                    
-                    {/* 3. Статус заявки */}
+            <tbody>
+              {orders.map((o, i) => (
+                <tr key={o.id} className={`border-b hover:bg-blue-50/30 transition ${i % 2 === 1 ? 'bg-gray-50/40' : ''}`}>
+                  <td className="p-3 text-sm font-mono text-gray-500">#{o.id}</td>
+                  <td className="p-3 text-sm text-gray-600 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('ru-RU')}</td>
+                  <td className="p-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[o.status] || 'bg-gray-100'}`}>
+                      {STATUS_LABELS[o.status] || o.status}
+                    </span>
+                  </td>
+                  <td className="p-3 text-sm">
+                    <select
+                      value={paymentStatuses[o.id] || 'unpaid'}
+                      onChange={(e) => updatePaymentStatus(o.id, e.target.value)}
+                      className={`text-xs rounded px-2 py-1 border ${
+                        (paymentStatuses[o.id] || 'unpaid') === 'paid' ? 'bg-green-50 text-green-700 border-green-300' :
+                        (paymentStatuses[o.id] || 'unpaid') === 'partial' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
+                        'bg-red-50 text-red-700 border-red-300'
+                      }`}
+                    >
+                      <option value="unpaid">❌ Не оплачено</option>
+                      <option value="partial">⚠️ Частично</option>
+                      <option value="paid">✅ Оплачено</option>
+                    </select>
+                  </td>
+                  <td className="p-3 text-sm">
+                    {o.workshop ? (
+                      <div>
+                        <div className="font-medium">{o.workshop.name}</div>
+                        <div className="text-xs text-gray-500">{o.workshop.city}</div>
+                      </div>
+                    ) : '—'}
+                  </td>
+                  <td className="p-3 text-sm">{o.client ? `${o.client.last_name} ${o.client.first_name}` : '—'}</td>
+                  <td className="p-3 text-sm whitespace-nowrap">{o.car_brand} {o.car_model} {o.car_year}</td>
+                  <td className="p-3 text-sm text-gray-600 max-w-[200px]">
+                    <span className="block truncate">{o.order_services.map(os => os.service?.name).filter(Boolean).join(', ') || '—'}</span>
+                  </td>
+                  <td className="p-3">
+                    <StarRating
+                      rating={ratings[o.id] || 0}
+                      onRate={(value) => updateRating(o.id, value)}
+                      readonly={o.status !== 'done'}
+                      size="sm"
+                    />
+                  </td>
+                  {isMasterOrAdmin && (
                     <td className="p-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[o.status] || 'bg-gray-100'}`}>
-                        {STATUS_LABELS[o.status] || o.status}
-                      </span>
-                    </td>
-                    
-                    {/* 4. СТАТУС ОПЛАТЫ (новая колонка) */}
-                    <td className="p-3 text-sm">
-                      <select
-                        value={paymentStatuses[o.id] || 'unpaid'}
-                        onChange={(e) => updatePaymentStatus(o.id, e.target.value)}
-                        className={`text-xs rounded px-2 py-1 border ${
-                          (paymentStatuses[o.id] || 'unpaid') === 'paid' ? 'bg-green-50 text-green-700 border-green-300' :
-                          (paymentStatuses[o.id] || 'unpaid') === 'partial' ? 'bg-yellow-50 text-yellow-700 border-yellow-300' :
-                          'bg-red-50 text-red-700 border-red-300'
-                        }`}
-                      >
-                        <option value="unpaid">❌ Не оплачено</option>
-                        <option value="partial">⚠️ Частично</option>
-                        <option value="paid">✅ Оплачено</option>
-                      </select>
-                    </td>
-                    {/* Оценка работы мастера */}
-                    <td className="p-3">
-                        <StarRating
-                          rating={ratings[o.id] || 0}
-                          onRate={(value) => updateRating(o.id, value)}
-                          readonly={o.status !== 'done'}
-                          size="md"
-                        />
+                      <div className="flex gap-1 flex-wrap">
                         {o.status !== 'done' && (
-                          <span className="text-xs text-gray-400 ml-2">(доступно после готовности)</span>
-                        )}
-                    </td>
-                    
-                    {/* 5. Мастерская */}
-                    <td className="p-3 text-sm">
-                      {o.workshop ? (
-                        <div>
-                          <div className="font-medium">{o.workshop.name}</div>
-                          <div className="text-xs text-gray-500">{o.workshop.city}</div>
-                        </div>
-                      ) : '—'}
-                    </td>
-                    
-                    {/* 6. Клиент */}
-                    <td className="p-3 text-sm">{o.client ? `${o.client.last_name} ${o.client.first_name}` : '—'}</td>
-                    
-                    {/* 7. Автомобиль */}
-                    <td className="p-3 text-sm whitespace-nowrap">{o.car_brand} {o.car_model} {o.car_year}</td>
-                    
-                    {/* 8. Услуги */}
-                    <td className="p-3 text-sm text-gray-600 max-w-[150px]">
-                      <span className="block truncate">{o.order_services.map(os => os.service?.name).filter(Boolean).join(', ') || '—'}</span>
-                    </td>
-                    
-                    {/* 9. Действия (только для master/admin) */}
-                    {isMasterOrAdmin && (
-                      <td className="p-3">
-                        <div className="flex gap-1 flex-wrap">
-                          {o.status !== 'done' && (
-                            <>
-                              <button onClick={() => openEdit(o)} className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
-                                ✏️ Редактировать
-                              </button>
-                              <button onClick={() => openStatusChange(o)} className="px-2 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600 transition">
-                                🔄 Сменить статус
-                              </button>
-                            </>
-                          )}
-                          {o.status === 'done' && (
-                            <button onClick={() => { setSelectedOrder(o); setShowContactModal(true); }}
-                              className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition">
-                              📞 Связаться
+                          <>
+                            <button onClick={() => openEdit(o)} className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition">
+                              ✏️ Ред.
                             </button>
-                          )}
-                          <button onClick={() => handleDelete(o)} disabled={deleting === o.id}
-                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
-                            🗑️ Удалить
+                            <button onClick={() => openStatusChange(o)} className="px-2 py-1 bg-amber-500 text-white text-xs rounded hover:bg-amber-600 transition">
+                              🔄 Статус
+                            </button>
+                            <button onClick={() => { setSelectedOrder(o); setShowChatModal(true); }} 
+                              className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition">
+                              💬 Чат
+                            </button>
+                          </>
+                        )}
+                        {o.status === 'done' && (
+                          <button onClick={() => { setSelectedOrder(o); setShowContactModal(true); }}
+                            className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition">
+                            📞 Связаться
                           </button>
-                          {/* Кнопка чата */}
-                          <button
-                            onClick={() => {
-                              setSelectedOrder(o);
-                              setShowChatModal(true);
-                            }}
-                            className="px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 transition"
-                          >
-                            💬 Чат
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                        )}
+                        <button onClick={() => handleDelete(o)} disabled={deleting === o.id}
+                          className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition disabled:opacity-50">
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
@@ -432,7 +403,7 @@ export default function OrdersPage() {
                   className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary bg-white">
                   {workshops.map((ws) => (
                     <option key={ws.id} value={ws.id}>
-                      {ws.city} — {ws.name} ({ws.address || 'Адрес не указан'})
+                      {ws.city} — {ws.name}
                     </option>
                   ))}
                 </select>
@@ -572,10 +543,6 @@ export default function OrdersPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Email:</span>
-                    <span className="font-medium">{selectedOrder.client?.phone || '—'}</span>
-                  </div>
                 </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -602,31 +569,32 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
-    {/* ===== МОДАЛЬНОЕ ОКНО ЧАТА ===== */}
-    {showChatModal && selectedOrder && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl w-full max-w-xl">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h2 className="text-lg font-bold text-primary-dark">
-              💬 Чат по заявке #{selectedOrder.id}
-            </h2>
-            <button
-              onClick={() => setShowChatModal(false)}
-              className="text-gray-400 hover:text-gray-600 text-xl"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="p-4">
-            <OrderChat
-              orderId={selectedOrder.id}
-              currentUserName={user?.name || 'Пользователь'}
-              currentUserRole={user?.role || 'client'}
-            />
+
+      {/* ===== МОДАЛЬНОЕ ОКНО ЧАТА ===== */}
+      {showChatModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-lg font-bold text-primary-dark">
+                💬 Чат по заявке #{selectedOrder.id}
+              </h2>
+              <button
+                onClick={() => setShowChatModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              <OrderChat
+                orderId={selectedOrder.id}
+                currentUserName={user?.name || 'Пользователь'}
+                currentUserRole={user?.role || 'client'}
+              />
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
     </div>
   );
 }

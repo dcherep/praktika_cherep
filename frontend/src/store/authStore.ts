@@ -34,14 +34,15 @@ export const useAuthStore = create<AuthStore>()(
   )
 );
 
-// Временно для тестирования — КЛИЕНТ
+// ========== ТЕСТОВЫЙ ПОЛЬЗОВАТЕЛЬ (УДАЛИТЬ ПОТОМ) ==========
+// Меняйте role на нужную: 'client', 'master' или 'admin'
 const testUser = {
   id: 1,
-  name: "Тестовый Клиент",
-  role: "client" as UserRole
+  name: "Тестовый Пользователь",
+  role: "master" as UserRole   // ← сюда пиши: client, master или admin
 };
 
-// Устанавливаем тестовые данные
+// Автоматический вход при загрузке
 if (!localStorage.getItem('token')) {
   localStorage.setItem('token', 'test-token');
   useAuthStore.getState().setAuth('test-token', testUser);

@@ -2,14 +2,13 @@ import { useState } from 'react';
 
 interface BookingCalendarProps {
   onSelectDateTime: (date: string, time: string) => void;
-  bookedSlots?: string[]; // занятые слоты (для проверки)
+  bookedSlots?: string[];
 }
 
 const BookingCalendar = ({ onSelectDateTime, bookedSlots = [] }: BookingCalendarProps) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
 
-  // Получить следующие 14 дней
   const getDates = () => {
     const dates = [];
     for (let i = 0; i < 14; i++) {
@@ -20,17 +19,16 @@ const BookingCalendar = ({ onSelectDateTime, bookedSlots = [] }: BookingCalendar
     return dates;
   };
 
-  // Доступные часы
   const timeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
-  // Проверка, занят ли слот
   const isSlotBooked = (date: string, time: string) => {
     return bookedSlots.includes(`${date}_${time}`);
   };
 
-  const handleConfirm = () => {
-    if (selectedDate && selectedTime) {
-      onSelectDateTime(selectedDate, selectedTime);
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
+    if (selectedDate && time) {
+      onSelectDateTime(selectedDate, time);
     }
   };
 
@@ -86,7 +84,7 @@ const BookingCalendar = ({ onSelectDateTime, bookedSlots = [] }: BookingCalendar
               return (
                 <button
                   key={time}
-                  onClick={() => !isBooked && setSelectedTime(time)}
+                  onClick={() => !isBooked && handleTimeSelect(time)}
                   disabled={isBooked}
                   className={`p-2 rounded-lg text-sm transition ${
                     isSelected
@@ -105,22 +103,15 @@ const BookingCalendar = ({ onSelectDateTime, bookedSlots = [] }: BookingCalendar
         </div>
       )}
 
-      {/* Кнопка подтверждения */}
-      <button
-        onClick={handleConfirm}
-        disabled={!selectedDate || !selectedTime}
-        className={`w-full py-2 rounded-lg font-semibold transition ${
-          selectedDate && selectedTime
-            ? 'bg-primary text-white hover:bg-primary-dark'
-            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        ✅ Подтвердить запись
-      </button>
+      {/* Отображение выбранного (без кнопки!) */}
+      {selectedDate && selectedTime && (
+        <div className="mt-4 p-2 bg-green-100 text-green-700 text-sm rounded-lg text-center">
+          ✅ Выбрано: {selectedDate} в {selectedTime}
+        </div>
+      )}
 
-      {/* Подсказка */}
       <div className="mt-4 text-xs text-gray-400 text-center border-t pt-3">
-        🟢 свободно | 🔴 занято | после подтверждения будет создана заявка
+        🟢 свободно | 🔴 занято | выберите дату и время
       </div>
     </div>
   );

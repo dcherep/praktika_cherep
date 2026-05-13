@@ -42,6 +42,7 @@ export default function CreateOrderPage() {
   const { register, handleSubmit, formState:{errors}, setValue, watch } = useForm<FormData>({
     resolver: yupResolver(schema), defaultValues: { service_ids:[] },
   });
+  
   const handleSelectDateTime = (date: string, time: string) => {
     setSelectedDateTime({ date, time });
   };
@@ -50,6 +51,12 @@ export default function CreateOrderPage() {
   const total = services.filter((s) => selectedIds.includes(s.id)).reduce((sum, s) => sum + (Number(s.price)||0), 0);
 
   const onSubmit = async (data: FormData) => {
+    // Дополнительная проверка для клиента
+    if (!isMaster && !selectedDateTime) {
+      showToast('❌ Пожалуйста, выберите дату и время записи', 'error');
+      return;
+    }
+    
     setSaving(true);
     try {
       // Мастер создаёт заявку без оплаты — сразу сохраняем
@@ -61,15 +68,21 @@ export default function CreateOrderPage() {
           description: data.description || null,
           service_ids: data.service_ids,
           workshop_id: data.workshop_id,
-          appointment_date: selectedDateTime?.date,  // добавить дату
-          appointment_time: selectedDateTime?.time,  // добавить время
+          appointment_date: selectedDateTime?.date,
+          appointment_time: selectedDateTime?.time,
         });
         showToast('Заявка создана!', 'success');
         navigate('/app/orders');
       } else {
         // Клиент идёт на оплату
         const selectedServices = services.filter((s) => data.service_ids?.includes(s.id));
-        sessionStorage.setItem('orderDraft', JSON.stringify({ ...data, total, services: selectedServices }));
+        sessionStorage.setItem('orderDraft', JSON.stringify({ 
+          ...data, 
+          total, 
+          services: selectedServices,
+          appointment_date: selectedDateTime?.date,
+          appointment_time: selectedDateTime?.time
+        }));
         navigate('/app/payment');
       }
     } catch {
@@ -85,8 +98,8 @@ export default function CreateOrderPage() {
 
   const isMaster = user?.role === 'master' || user?.role === 'admin';
 
- return (
-    <div className="max-w-xl mx-auto">
+  return (
+    <div className="max-w-xl mx-auto pb-10">
       <ToastContainer />
       <h1 className="text-2xl font-bold text-primary-dark mb-6">
         {isMaster ? 'Новая заявка (от мастера)' : 'Новая заявка'}
@@ -137,7 +150,7 @@ export default function CreateOrderPage() {
               <option value="">-- Выберите мастерскую --</option>
               {workshops.map((ws) => (
                 <option key={ws.id} value={ws.id}>
-                  {ws.city} — {ws.name} ({ws.address || 'Адрес не указан'})
+                  {ws.city} — {ws.name}
                 </option>
               ))}
             </select>
@@ -212,41 +225,39 @@ export default function CreateOrderPage() {
             placeholder="Опишите проблему или пожелания..." />
         </div>
 
-        {/* ===== КАЛЕНДАРЬ ЗАПИСИ (ВНУТРИ ФОРМЫ!) ===== */}
+        {/* ===== КАЛЕНДАРЬ ЗАПИСИ ===== */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <BookingCalendar onSelectDateTime={handleSelectDateTime} />
         </div>
 
-        {/* Отображение выбранной даты и предупреждение */}
-        {selectedDateTime ? (
+        {/* Отображение выбранной даты */}
+        {selectedDateTime && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center gap-2">
             <span>✅</span>
             Вы записаны на <strong>{selectedDateTime.date}</strong> в <strong>{selectedDateTime.time}</strong>
           </div>
-        ) : (
-          !isMaster && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700 text-sm flex items-center gap-2">
-              <span>⚠️</span>
-              Пожалуйста, выберите дату и время записи перед оплатой
-            </div>
-          )
         )}
 
-        {/* Кнопки */}
+        {/* ===== КНОПКИ С УСЛОВНЫМ РЕНДЕРИНГОМ ===== */}
         <div className="flex gap-3">
+          {!isMaster && !selectedDateTime ? (
+            <div className="flex-1 py-3 bg-gray-300 text-gray-500 rounded-xl font-semibold text-center cursor-not-allowed">
+              ⏳ Сначала выберите дату и время записи
+            </div>
+          ) : (
+            <button 
+              type="submit" 
+              disabled={saving}
+              className="flex-1 py-3 bg-primary text-white rounded-xl hover:bg-primary-dark transition font-semibold disabled:opacity-50"
+            >
+              {saving ? 'Сохранение...' : (isMaster ? 'Создать заявку' : 'Далее — к оплате →')}
+            </button>
+          )}
           <button 
-            type="submit" 
-            disabled={saving || (!isMaster && !selectedDateTime)} 
-            className={`flex-1 py-3 rounded-xl font-semibold transition ${
-              saving || (!isMaster && !selectedDateTime)
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-primary text-white hover:bg-primary-dark'
-            }`}
+            type="button" 
+            onClick={() => navigate('/app/orders')}
+            className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition"
           >
-            {saving ? 'Сохранение...' : (isMaster ? 'Создать заявку' : 'Далее — к оплате →')}
-          </button>
-          <button type="button" onClick={()=>navigate('/app/orders')}
-            className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition">
             Отмена
           </button>
         </div>
